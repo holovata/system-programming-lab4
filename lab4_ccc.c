@@ -34,33 +34,6 @@ typedef struct Stack{
     struct Stack *next;
 } Stack;
 
-void insertDefaultValues(struct GrammarRule **gRule, struct GrammarRule *tempRule){
-    if (*gRule == NULL) {
-        tempRule->firstSet[0] = '\0';
-        tempRule->followSet[0] = '\0';
-        tempRule->firstSetCount = 0;
-        tempRule->followSetCount = 0;
-        tempRule->firstSetCalculated = false;
-        tempRule->followSetCalculated = false;
-        tempRule->next = NULL;
-        *gRule = tempRule;
-    }
-    else { //if rule is not the first
-        struct GrammarRule *prevRule = (*gRule);
-        while(prevRule->next != NULL){
-            prevRule = prevRule->next;
-        }
-        prevRule->next = tempRule;
-        tempRule->firstSet[0] = '\0';
-        tempRule->followSet[0] = '\0';
-        tempRule->firstSetCount = 0;
-        tempRule->followSetCount = 0;
-        tempRule->firstSetCalculated = false;
-        tempRule->followSetCalculated = false;
-        tempRule->next = NULL;
-    }
-}
-
 char *createSubstring(char *initialString, int begin, int length){
     char *resultString;
     resultString = malloc((length) * sizeof(char));
@@ -137,12 +110,32 @@ void displayGrammar(GrammarRule *gRule) {
     }
 }
 
-/*int isRecursive(GrammarRule *gRule) {
-    for (int i = 0; i < gRule->productionsCount; ++i)
-        if (gRule->leftSide[0] == gRule->rightSide[i][0])
-            return 1;
-    return 0;
-}*/ //перенесла в цикл в eliminateLeftRecursion()
+void createEmptyRule(struct GrammarRule **gRule, struct GrammarRule *tempRule){
+    if (*gRule == NULL) {
+        tempRule->firstSet[0] = '\0';
+        tempRule->followSet[0] = '\0';
+        tempRule->firstSetCount = 0;
+        tempRule->followSetCount = 0;
+        tempRule->firstSetCalculated = false;
+        tempRule->followSetCalculated = false;
+        tempRule->next = NULL;
+        *gRule = tempRule;
+    }
+    else { //if rule is not the first
+        struct GrammarRule *prevRule = (*gRule);
+        while(prevRule->next != NULL){
+            prevRule = prevRule->next;
+        }
+        prevRule->next = tempRule;
+        tempRule->firstSet[0] = '\0';
+        tempRule->followSet[0] = '\0';
+        tempRule->firstSetCount = 0;
+        tempRule->followSetCount = 0;
+        tempRule->firstSetCalculated = false;
+        tempRule->followSetCalculated = false;
+        tempRule->next = NULL;
+    }
+}
 
 GrammarRule *eliminateLeftRecursion(GrammarRule *gRule) {
     GrammarRule *gRuleNoRecursion = NULL;
@@ -187,13 +180,13 @@ GrammarRule *eliminateLeftRecursion(GrammarRule *gRule) {
             newRule2->productionsCount = rule2ProdCount + 1;
             strcpy(newRule2->rightSide[rule2ProdCount],"&"); //S'->aS'|&
 
-            insertDefaultValues(&gRuleNoRecursion,newRule1);
-            insertDefaultValues(&gRuleNoRecursion,newRule2);
+            createEmptyRule(&gRuleNoRecursion,newRule1);
+            createEmptyRule(&gRuleNoRecursion,newRule2);
         }
         else { //if not recursive
             GrammarRule *newRule = malloc(sizeof(GrammarRule));
             *newRule = *currentRule;
-            insertDefaultValues(&gRuleNoRecursion,newRule);
+            createEmptyRule(&gRuleNoRecursion,newRule);
         }
         currentRule = currentRule->next;
     }
@@ -206,7 +199,7 @@ GrammarRule *findRuleByNonTerminal(GrammarRule *gRule, char nonTerminal){
             return gRule;
         gRule = gRule->next;
     }
-    printf("There are no %c->... rules.", nonTerminal);
+    printf("There are no %c->... rules tn the grammar.", nonTerminal);
     exit(0);
 }
 
@@ -228,17 +221,6 @@ char *eliminateEpsilon(char set[]){
     set[newSetIndex] = '\0';
     return set;
 }
-
-/*int checkIfExist(char first[], char pr){ //
-    int i = 0;
-    while (i < strlen(first)) {
-        if (first[i] == pr) {
-            return 1;
-        }
-        i++;
-    }
-    return 0;
-}*/ //є стандартна функція
 
 char *eliminateDuplicates(char initialString[]) {
     int initialStringLength = strlen(initialString);
@@ -313,14 +295,6 @@ void displayFirstSet(GrammarRule* gRule){
     }
 
 }
-/*GrammarRule* first(GrammarRule* p ) {
-    GrammarRule * iterator = p;
-    while(iterator!=NULL){
-        iterator = firstForOneRule(iterator,p);
-        iterator = iterator->next;
-    }
-    return p;
-}*/
 
 int findNonTerminalPositionInProduction(char production[], char nonTerminalName[]) {
     if (strlen(nonTerminalName) == 1) { //if non-terminal is S
@@ -336,9 +310,6 @@ int findNonTerminalPositionInProduction(char production[], char nonTerminalName[
     return 0;
 }
 
-//Ти спитаєш, чому тут є ще одна функція крім findRuleByNonTerminal(), яка шукає правило за терміналом. відповіді в мене немає
-// якщо що, скажемо що писали ти фьорст, я фоллоу і типу не помітили. чи можна переробити якусь з них, але я зараз... не в кондиції
-// ну я так розумію, що  ця шукає тільки для S', а findRuleByNonTerminal тільки для S. мб їх перейменувати якось можна
 GrammarRule *findRuleByLeftSideName(GrammarRule *gRule , char *name){
     while (gRule != NULL) {
         if (strcmp(name, gRule->leftSide) == 0)
@@ -442,14 +413,6 @@ void displayFollowSet(GrammarRule *gRule){
         gRule = gRule->next;
     }
 }
-/*GrammarRule * follow(GrammarRule * p){
-    GrammarRule * iterator = p;
-    while(iterator!=NULL){
-        iterator = followForOneRule(iterator,p,p);
-        iterator = iterator->next;
-    }
-    return p;
-}*/
 
 int findProductionIndexContainingTerminal(GrammarRule *gRule, GrammarRule *allRules, char targetTerminal) {
     for (int productionIndex = 0; productionIndex < gRule->productionsCount; productionIndex++) {
@@ -477,10 +440,8 @@ int findProductionIndexContainingTerminal(GrammarRule *gRule, GrammarRule *allRu
                 else
                     return productionIndex;
             }
-                /*else if (gRule->rightSide[productionIndex][currentPosition] == targetTerminal)
-                    return 1;*/
             else if (gRule->rightSide[productionIndex][currentPosition] == '&')
-                return 2; //хз чому 2
+                return 2;
 
             break;
         }
@@ -639,24 +600,21 @@ int main(){
     printf("----------------------------------------------------------------------------\n");
 
     printf("Enter your grammar rules:\n");
-    createGrammar(&grammar); //цю функцію в принципі можна перенести в main, типу ми тупі і Омельчук не казала, що мейн повинен бути коротким
+    createGrammar(&grammar);
     printf("The grammar has been created.\n");
     printf("-----------------------------------------\n");
 
-    //printAllRules(rSides); - другий раз виводить граматику, може прибрати це?
-
     GrammarRule *newGrammar = NULL;
-    newGrammar = eliminateLeftRecursion(grammar); //я хз чи ми тут тільки ліву рекурсію видаляємо. напевне так
+    newGrammar = eliminateLeftRecursion(grammar);
     printf("The same grammar without left recursions:\n");
     displayGrammar(newGrammar);
     printf("-----------------------------------------\n");
 
     newGrammar->followSet[0] ='$';
-    newGrammar->followSet[1] = '\0'; //мб це можна прибрати, я хз шо воно робить
+    newGrammar->followSet[1] = '\0';
     newGrammar->followSetCount = 1;
 
     printf("First_1 of the non-terminals of the grammar:\n");
-    //newGrammar = first(newGrammar); - прибрала цю функцію
     GrammarRule *gRule_first = newGrammar;
     while(gRule_first != NULL){
         gRule_first = calculateFirstSet(gRule_first,newGrammar);
@@ -666,7 +624,6 @@ int main(){
     printf("-----------------------------------------\n");
 
     printf("Follow_1 of the non-terminals of the grammar:\n");
-    //newGrammar = follow(newGrammar); - прибрала цю функцію
     GrammarRule *gRule_follow = newGrammar;
     while(gRule_follow != NULL){
         gRule_follow = calculateFollowSet(gRule_follow,newGrammar,newGrammar);

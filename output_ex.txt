@@ -1,0 +1,72 @@
+To start the program, enter grammar rules row by row in the following format:
+A->nN|M
+B->kKKk|&  -  & <=> epsilon
+When you finish the input, enter @ to create a grammar and begin analyzing.
+----------------------------------------------------------------------------
+Enter your grammar rules:
+E->E+T|T
+T->T*F|F
+F->(E)|a
+T->&
+@
+The grammar has been created.
+-----------------------------------------
+The same grammar without left recursions:
+E->TE'
+E'->+TE'|&
+T->FT'
+T'->*FT'|&
+F->(E)|a
+T->&
+-----------------------------------------
+First_1 of the non-terminals of the grammar:
+First_1(E) = {(,a}
+First_1(E') = {+,&}
+First_1(T) = {(,a}
+First_1(T') = {*,&}
+First_1(F) = {(,a}
+First_1(T) = {&}
+-----------------------------------------
+Follow_1 of the non-terminals of the grammar:
+Follow_1(E) = {$,)}
+Follow_1(E') = {$,)}
+Follow_1(T) = {$,),+}
+Follow_1(T') = {$,),+}
+Follow_1(F) = {$,),+,*}
+Follow_1(T) = {$,),+}
+-----------------------------------------
+LL(1) Table: <non-terminal, terminal> = rule to be applied
+<E,(> = E->TE'
+<E,a> = E->TE'
+<E',+> = E'->+TE'
+<E',$> = E'->&
+<E',)> = E'->&
+<T,(> = T->FT'
+<T,a> = T->FT'
+<T',*> = T'->*FT'
+<T',$> = T'->&
+<T',)> = T'->&
+<T',+> = T'->&
+<F,(> = F->(E)
+<F,a> = F->a
+<T,$> = T->&
+<T,)> = T->&
+<T,+> = T->&
+-----------------------------------------
+Enter a string to analyze:
+a+a
+a+a$ accepted
+Enter a string to analyze:
+a+a*a
+a+a*a$ accepted
+Enter a string to analyze:
+aaaa
+aaaa$ rejected by syntax error at symbol: 2
+Enter a string to analyze:
+3434242
+3434242$ rejected by syntax error at symbol: 1
+Enter a string to analyze:
+@
+
+Process returned 0 (0x0)   execution time : 50.828 s
+Press any key to continue.
