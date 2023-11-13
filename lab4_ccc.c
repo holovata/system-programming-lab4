@@ -434,7 +434,7 @@ int findProductionIndexContainingTerminal(GrammarRule *gRule, GrammarRule *allRu
                     a = findProductionIndexContainingTerminal(findRuleByLeftSideName(allRules, nonTerminalName), allRules, targetTerminal);
                     currentPosition = currentPosition + 2; //move further over '
                 }
-                if (a == 2) //хз чому 2
+                if (a == 2)
                     continue;
                 else
                     return productionIndex;
