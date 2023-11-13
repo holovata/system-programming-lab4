@@ -424,7 +424,9 @@ int findProductionIndexContainingTerminal(GrammarRule *gRule, GrammarRule *allRu
                 //if current character is non-terminal
                 int a = -1;
                 if (gRule->rightSide[productionIndex][currentPosition + 1] != '\'') { //if S
+                    //recursive call to find the production index for the non-terminal
                     a = findProductionIndexContainingTerminal(findRuleByNonTerminal(allRules, gRule->rightSide[productionIndex][currentPosition]), allRules, targetTerminal);
+                    //findRuleByNonTerminal - rules with non-terminal gRule->rightSide[productionIndex][currentPosition] on the left side
                     currentPosition++; //move further
                 }
                 else { //if S'
@@ -434,13 +436,13 @@ int findProductionIndexContainingTerminal(GrammarRule *gRule, GrammarRule *allRu
                     a = findProductionIndexContainingTerminal(findRuleByLeftSideName(allRules, nonTerminalName), allRules, targetTerminal);
                     currentPosition = currentPosition + 2; //move further over '
                 }
-                if (a == 2)
-                    continue;
+                if (a == -2)
+                    continue; //epsilon case => move to the next character
                 else
                     return productionIndex;
             }
             else if (gRule->rightSide[productionIndex][currentPosition] == '&')
-                return 2;
+                return -2;
 
             break;
         }
@@ -462,26 +464,29 @@ void insertRecordIntoLL1Table(LL1Table **targetTable, LL1Table *tableRecord){
 
 LL1Table *createLL1Table(GrammarRule *gRule, GrammarRule *allRules){
     LL1Table *analyzerTable = NULL;
+    //iterate through each grammar rule
     while (gRule != NULL) {
+        //iterate through the elements in the first set of the current rule
         for (int i = 0; i < gRule->firstSetCount; i++) {
-            if (gRule->firstSet[i] == '&') {
+            if (gRule->firstSet[i] == '&') { //first (+)1 follow; if first = & => first (+)1 follow = follow
                 for (int j = 0; j < gRule->followSetCount; j++) {
-                    LL1Table *tempTable = malloc(sizeof(LL1Table));
-                    strcpy(tempTable->nonTerminal, gRule->leftSide);
-                    tempTable->terminal = gRule->followSet[j];
-                    tempTable->appliedRule[0] = '&';
+                    //for each terminal in the follow set we create a table entry with epsilon
+                    LL1Table *tempRecord = malloc(sizeof(LL1Table));
+                    strcpy(tempRecord->nonTerminal, gRule->leftSide);
+                    tempRecord->terminal = gRule->followSet[j];
+                    tempRecord->appliedRule[0] = '&';
 
-                    insertRecordIntoLL1Table(&analyzerTable, tempTable);
+                    insertRecordIntoLL1Table(&analyzerTable, tempRecord);
                 }
             }
-            else {
+            else {//first (+)1 follow; if first != & => first (+)1 follow = first
                 int productionIndex = findProductionIndexContainingTerminal(gRule, allRules, gRule->firstSet[i]);
-                LL1Table *tempTable = malloc(sizeof(LL1Table));
-                strcpy(tempTable->nonTerminal, gRule->leftSide);
-                tempTable->terminal = gRule->firstSet[i];
-                strcpy(tempTable->appliedRule, gRule->rightSide[productionIndex]);
+                LL1Table *tempRecord = malloc(sizeof(LL1Table));
+                strcpy(tempRecord->nonTerminal, gRule->leftSide);
+                tempRecord->terminal = gRule->firstSet[i];
+                strcpy(tempRecord->appliedRule, gRule->rightSide[productionIndex]);
 
-                insertRecordIntoLL1Table(&analyzerTable, tempTable);
+                insertRecordIntoLL1Table(&analyzerTable, tempRecord);
             }
         }
         gRule = gRule->next;
@@ -530,17 +535,10 @@ char *findTerminalInLL1Table(LL1Table *analyzerTable, char *topElement, char tar
     return "0";
 }
 
-void displayStack(Stack *stack) {
-    if (stack == NULL)
-        return;
-    printf("\n%s\n_", stack->elementValue);
-    displayStack(stack->next);
-}
-
-int checkIfValid(LL1Table *analyzerTable, char *stringToAnalyze, GrammarRule *gRule) {
+int findSyntaxError(LL1Table *analyzerTable, char *stringToAnalyze, GrammarRule *gRule) {
     Stack *stack = NULL;
-    strcat(stringToAnalyze, "$"); //$ indicates the end of the input
-    insertElementOnTop(&stack, "$");
+    strcat(stringToAnalyze, "#"); //# indicates the end of the input
+    insertElementOnTop(&stack, "#");
     insertElementOnTop(&stack, gRule->leftSide); //insert core element
     int inputIndex = 0;
 
@@ -548,15 +546,15 @@ int checkIfValid(LL1Table *analyzerTable, char *stringToAnalyze, GrammarRule *gR
         char *stackTop = getTopElement(stack);
         if (stackTop[0] == stringToAnalyze[inputIndex]) { //if symbol on top of the stack = current symbol of the string => delete both
             inputIndex++;
-            if (stackTop[0] == '$') //stack is empty but we have not reached the end of the string
-                return -1;
+            if (stackTop[0] == '#') //stack is empty, we have reached the end of the string
+                return -1; //correct string
             removeTopElement(&stack);
         }
         else {
             char *appliedRule = findTerminalInLL1Table(analyzerTable, getTopElement(stack), stringToAnalyze[inputIndex]);
             if (strcmp(appliedRule, "0") == 0) //"0" if we didn`t find the character in the list of terminals
                 return inputIndex;
-            if (strcmp(appliedRule, "&") == 0) //turn the top elem to epsilon
+            if (strcmp(appliedRule, "&") == 0) //turn the top element to epsilon
                 removeTopElement(&stack);
             else if (strlen(appliedRule) > 1) {
                 removeTopElement(&stack);
@@ -609,14 +607,14 @@ int main(){
     displayGrammar(newGrammar);
     printf("-----------------------------------------\n");
 
-    newGrammar->followSet[0] ='$';
+    newGrammar->followSet[0] ='#';
     newGrammar->followSet[1] = '\0';
     newGrammar->followSetCount = 1;
 
     printf("First_1 of the non-terminals of the grammar:\n");
     GrammarRule *gRule_first = newGrammar;
-    while(gRule_first != NULL){
-        gRule_first = calculateFirstSet(gRule_first,newGrammar);
+    while (gRule_first != NULL){
+        gRule_first = calculateFirstSet(gRule_first, newGrammar);
         gRule_first = gRule_first->next;
     }
     displayFirstSet(newGrammar);
@@ -624,8 +622,8 @@ int main(){
 
     printf("Follow_1 of the non-terminals of the grammar:\n");
     GrammarRule *gRule_follow = newGrammar;
-    while(gRule_follow != NULL){
-        gRule_follow = calculateFollowSet(gRule_follow,newGrammar,newGrammar);
+    while (gRule_follow != NULL){
+        gRule_follow = calculateFollowSet(gRule_follow, newGrammar, newGrammar);
         gRule_follow = gRule_follow->next;
     }
     displayFollowSet(newGrammar);
@@ -639,15 +637,15 @@ int main(){
     char stringToAnalyze[MAX_INPUT_LENGTH];
     while (1) {
         printf("Enter a string to analyze: \n");
-        scanf("%s",stringToAnalyze);
-        if (strcmp(stringToAnalyze,"@") == 0)
+        scanf("%s", stringToAnalyze);
+        if (strcmp(stringToAnalyze, "@") == 0)
             break;
 
-        int isCorrect = checkIfValid(analyzerTable, stringToAnalyze, newGrammar);
-        if (isCorrect == -1)
-            printf("%s accepted \n", stringToAnalyze);
+        int errorIndex = findSyntaxError(analyzerTable, stringToAnalyze, newGrammar);
+        if (errorIndex == -1)
+            printf("%s - valid string\n", stringToAnalyze);
         else
-            printf("%s rejected by syntax error at symbol: %d \n", stringToAnalyze, isCorrect + 1);
+            printf("%s - syntax error at symbol number %d\n", stringToAnalyze, errorIndex + 1);
     }
     return 0;
 }

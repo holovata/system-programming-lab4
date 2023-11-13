@@ -1,10 +1,12 @@
-E->E+T|T
-T->T*F|F
-F->(E)|a
-T->&
+grammars:
 
 S->BA
 A->+BA|&
 B->DC
 C->*DC|&
 D->(S)|a
+
+E->E+T|T
+T->T*F|F
+F->(E)|a
+T->&
