@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 static const int MAX_INPUT_LENGTH = 100; //the length of the analyzed string
-static const int MAX_NUMBER_OF_RULES = 30;
+static const int MAX_RULE_LENGTH = 30;
 
 typedef struct GrammarRule{
     char leftSide[3]; //non-terminal on the left side: A + possible ' + \0
@@ -52,7 +52,7 @@ void createGrammar(struct GrammarRule **gRule) {
     struct GrammarRule *newRule;
     char *partOfProduction;
     int partsOfProductionsCount = 0;
-    char *allRules = malloc(MAX_NUMBER_OF_RULES * sizeof(char));
+    char *allRules = malloc(MAX_RULE_LENGTH * sizeof(char));
 
     while (1) {
         scanf("%s", allRules);
@@ -150,43 +150,43 @@ GrammarRule *eliminateLeftRecursion(GrammarRule *gRule) {
         if (isRecursive) {
             //we break a left-recursive rule S->Sa|b into 1)S->bS' and 2)S'->aS'|&
             GrammarRule *newRule1 = malloc(sizeof(GrammarRule));
-            strcpy(newRule1->leftSide,currentRule->leftSide);
+            strcpy(newRule1->leftSide, currentRule->leftSide);
 
             GrammarRule *newRule2 = malloc(sizeof(GrammarRule));
-            strcpy(newRule2->leftSide,currentRule->leftSide);
-            strcat(newRule2->leftSide,"'"); //creates an S'->... rule
+            strcpy(newRule2->leftSide, currentRule->leftSide);
+            strcat(newRule2->leftSide, "'"); //creates an S'->... rule
 
             int rule1ProdCount = 0, rule2ProdCount = 0;
             for (int i = 0; i < currentRule->productionsCount; i++) {
                 if (currentRule->rightSide[i][0] == currentRule->leftSide[0]) { //S->Sa ===> S'->aS'
-                    char* afterRecursive = createSubstring(currentRule->rightSide[i],1,strlen(currentRule->rightSide[i])); //cut the string after S
-                    strcpy(newRule2->rightSide[rule2ProdCount],afterRecursive); //S'->a
-                    strcat(newRule2->rightSide[rule2ProdCount],newRule2->leftSide); //S'->aS'
+                    char* afterRecursive = createSubstring(currentRule->rightSide[i], 1, strlen(currentRule->rightSide[i])); //cut the string after S
+                    strcpy(newRule2->rightSide[rule2ProdCount], afterRecursive); //S'->a
+                    strcat(newRule2->rightSide[rule2ProdCount], newRule2->leftSide); //S'->aS'
                     rule2ProdCount++;
                 }
                 else { //S->b ===> S->bS'
-                    strcpy(newRule1->rightSide[rule1ProdCount],currentRule->rightSide[i]); //S->b
-                    strcat(newRule1->rightSide[rule1ProdCount],newRule2->leftSide); //S->bS'
+                    strcpy(newRule1->rightSide[rule1ProdCount], currentRule->rightSide[i]); //S->b
+                    strcat(newRule1->rightSide[rule1ProdCount], newRule2->leftSide); //S->bS'
                     rule1ProdCount++;
                 }
             }
 
             if (rule1ProdCount == 0) { //if there is no S->b rule ===> S->S'
-                strcpy(newRule1->rightSide[0],newRule2->leftSide);
+                strcpy(newRule1->rightSide[0], newRule2->leftSide);
                 rule1ProdCount++;
             }
 
             newRule1->productionsCount = rule1ProdCount;
             newRule2->productionsCount = rule2ProdCount + 1;
-            strcpy(newRule2->rightSide[rule2ProdCount],"&"); //S'->aS'|&
+            strcpy(newRule2->rightSide[rule2ProdCount], "&"); //S'->aS'|&
 
-            createEmptyRule(&gRuleNoRecursion,newRule1);
-            createEmptyRule(&gRuleNoRecursion,newRule2);
+            createEmptyRule(&gRuleNoRecursion, newRule1);
+            createEmptyRule(&gRuleNoRecursion, newRule2);
         }
         else { //if not recursive
             GrammarRule *newRule = malloc(sizeof(GrammarRule));
             *newRule = *currentRule;
-            createEmptyRule(&gRuleNoRecursion,newRule);
+            createEmptyRule(&gRuleNoRecursion, newRule);
         }
         currentRule = currentRule->next;
     }
@@ -199,7 +199,7 @@ GrammarRule *findRuleByNonTerminal(GrammarRule *gRule, char nonTerminal){
             return gRule;
         gRule = gRule->next;
     }
-    printf("There are no %c->... rules tn the grammar.", nonTerminal);
+    printf("There are no %c->... rules in the grammar.", nonTerminal);
     exit(0);
 }
 
@@ -252,7 +252,7 @@ GrammarRule* calculateFirstSet(GrammarRule *rule, GrammarRule *gRules) {
             if (isupper(rule->rightSide[i][characterIndex])) { //if the character is non-terminal
                 GrammarRule *nonTerminalRule = findRuleByNonTerminal(gRules, rule->rightSide[i][characterIndex]); //we find its productions
                 GrammarRule *nonTerminalRule1 = calculateFirstSet(nonTerminalRule, gRules); //and first_1
-                strcat(rule->firstSet,nonTerminalRule1->firstSet); //then we add its first_1 set to the first_1 set of the initial non-terminal
+                strcat(rule->firstSet, nonTerminalRule1->firstSet); //then we add its first_1 set to the first_1 set of the initial non-terminal
 
                 while(containsEpsilon(nonTerminalRule1->firstSet) && isupper(rule->rightSide[i][characterIndex + 1])) { //if next character is non-terminal
                     characterIndex++;
@@ -261,13 +261,12 @@ GrammarRule* calculateFirstSet(GrammarRule *rule, GrammarRule *gRules) {
                     strcat(rule->firstSet,nextNonTerminalRule1->firstSet); //then we add its first_1 set to the first_1 set of the initial non-terminal
                 }
 
-                strcpy(rule->firstSet,eliminateEpsilon(rule->firstSet)); //я не знаю, навіщо ми це робимо
-                strcpy(rule->firstSet,eliminateDuplicates(rule->firstSet)); //and remove duplicates
+                strcpy(rule->firstSet, eliminateEpsilon(rule->firstSet)); //remove epsilon
+                strcpy(rule->firstSet, eliminateDuplicates(rule->firstSet)); //and remove duplicates
             }
             else {
-                //if (!checkIfExist(rule->firstSet,rule->rightSide[i][0])) {
                 if (strchr(rule->firstSet,rule->rightSide[i][0]) == NULL) { //if first set does not contain the first symbol from the right side
-                    rule->firstSet[firstSetIndex] = rule->rightSide[i][0]; //???
+                    rule->firstSet[firstSetIndex] = rule->rightSide[i][0];
                     firstSetIndex++;
                     rule->firstSet[firstSetIndex] = '\0';
                 }
@@ -285,9 +284,9 @@ void displayFirstSet(GrammarRule* gRule){
         printf("First_1(%s) = {", gRule->leftSide);
         for (int i = 0; i < gRule->firstSetCount; i++) {
             if (i == gRule->firstSetCount - 1)
-                printf("%c",gRule->firstSet[i]);
+                printf("%c", gRule->firstSet[i]);
             else
-                printf("%c,",gRule->firstSet[i]);
+                printf("%c,", gRule->firstSet[i]);
         }
         printf("}\n");
 
@@ -310,7 +309,7 @@ int findNonTerminalPositionInProduction(char production[], char nonTerminalName[
     return 0;
 }
 
-GrammarRule *findRuleByLeftSideName(GrammarRule *gRule , char *name){
+GrammarRule *findRuleByLeftSideName(GrammarRule *gRule, char *name){
     while (gRule != NULL) {
         if (strcmp(name, gRule->leftSide) == 0)
             return gRule;
@@ -329,7 +328,7 @@ GrammarRule *calculateFollowSet(GrammarRule *targetRule, GrammarRule *gRule, Gra
 
                 if (gRule->rightSide[i][position] == '\0') { //if non-terminal is the last in the production
                     if (strcmp(targetRule->leftSide, gRule->leftSide) != 0) { //if target non-terminal and left side of gRule are different
-                        if(gRule->rightSide[i][position - 1] != '\'' && !isupper(gRule->rightSide[i][position - 1])) {
+                        if (gRule->rightSide[i][position - 1] != '\'' && !isupper(gRule->rightSide[i][position - 1])) {
                             //if there is no non-terminal before the target non-terminal in gRule, and it is not ' before the target non-terminal in gRule
                             targetRule->followSet[targetRule->followSetCount] = gRule->rightSide[i][position - 1]; //add terminal to follow_1 set
                             targetRule->followSetCount++;
@@ -338,9 +337,9 @@ GrammarRule *calculateFollowSet(GrammarRule *targetRule, GrammarRule *gRule, Gra
                             //if there is a non-terminal before the target non-terminal in gRule, calculate its follow set
                             GrammarRule *tempRule = calculateFollowSet(gRule, allRules, allRules);
                             if (targetRule->followSet[0] == '\0') //if follow_1 set of the target non-terminal is empty
-                                strcpy(targetRule->followSet,tempRule->followSet);
+                                strcpy(targetRule->followSet, tempRule->followSet);
                             else
-                                strcat(targetRule->followSet,tempRule->followSet);
+                                strcat(targetRule->followSet, tempRule->followSet);
                             targetRule->followSetCount = targetRule->followSetCount + strlen(tempRule->followSet);
                         }
                     }
@@ -392,7 +391,7 @@ GrammarRule *calculateFollowSet(GrammarRule *targetRule, GrammarRule *gRule, Gra
             gRule = gRule->next;
         }
 
-        strcpy(targetRule->followSet,eliminateDuplicates(targetRule->followSet));
+        strcpy(targetRule->followSet, eliminateDuplicates(targetRule->followSet));
         targetRule->followSetCount = strlen(targetRule->followSet);
         targetRule->followSetCalculated = true;
         return targetRule;
@@ -405,9 +404,9 @@ void displayFollowSet(GrammarRule *gRule){
         printf("Follow_1(%s) = {",gRule->leftSide);
         for (int i = 0; i < gRule->followSetCount; ++i) {
             if (i == gRule->followSetCount - 1)
-                printf("%c",gRule->followSet[i]);
+                printf("%c", gRule->followSet[i]);
             else
-                printf("%c,",gRule->followSet[i]);
+                printf("%c,", gRule->followSet[i]);
         }
         printf("}\n");
         gRule = gRule->next;
@@ -472,17 +471,17 @@ LL1Table *createLL1Table(GrammarRule *gRule, GrammarRule *allRules){
                     tempTable->terminal = gRule->followSet[j];
                     tempTable->appliedRule[0] = '&';
 
-                    insertRecordIntoLL1Table(&analyzerTable,tempTable);
+                    insertRecordIntoLL1Table(&analyzerTable, tempTable);
                 }
             }
             else {
-                int productionIndex = findProductionIndexContainingTerminal(gRule,allRules,gRule->firstSet[i]);
+                int productionIndex = findProductionIndexContainingTerminal(gRule, allRules, gRule->firstSet[i]);
                 LL1Table *tempTable = malloc(sizeof(LL1Table));
                 strcpy(tempTable->nonTerminal, gRule->leftSide);
                 tempTable->terminal = gRule->firstSet[i];
-                strcpy(tempTable->appliedRule,gRule->rightSide[productionIndex]);
+                strcpy(tempTable->appliedRule, gRule->rightSide[productionIndex]);
 
-                insertRecordIntoLL1Table(&analyzerTable,tempTable);
+                insertRecordIntoLL1Table(&analyzerTable, tempTable);
             }
         }
         gRule = gRule->next;
