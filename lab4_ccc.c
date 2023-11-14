@@ -569,11 +569,11 @@ int findSyntaxError(LL1Table *analyzerTable, char *stringToAnalyze, GrammarRule 
                         insertElementOnTop(&stack, nonTerminal);
                     }
                     else {
-                        char *terminal = malloc(2);
-                        terminal[0] = appliedRule[ruleLength];
-                        terminal[1] = '\0';
+                        char *element = malloc(2);
+                        element[0] = appliedRule[ruleLength];
+                        element[1] = '\0';
                         ruleLength--;
-                        insertElementOnTop(&stack, terminal);
+                        insertElementOnTop(&stack, element);
                     }
                 }
             }
